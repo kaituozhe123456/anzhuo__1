@@ -17,13 +17,11 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install Flet CLI
-        run: pip install flet
+      - name: Install Flet
+        run: pip install "flet[all]"
 
       - name: Build APK
-        uses: flet-dev/flet-build-action@v1
-        with:
-          target: apk
+        run: flet build apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
