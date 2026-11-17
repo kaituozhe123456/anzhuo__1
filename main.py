@@ -5,12 +5,10 @@ import asyncio
 import os
 from datetime import datetime
 
-
 # 获取手机/电脑专属的数据存储目录
 async def get_data_path(filename):
     data_dir = await ft.get_application_documents_directory()
     return os.path.join(data_dir, filename)
-
 
 # 手机版主程序
 def main(page: ft.Page):
@@ -18,7 +16,7 @@ def main(page: ft.Page):
     page.theme_mode = ft.ThemeMode.LIGHT
     page.bgcolor = "#F2F4F7"
     page.padding = 0
-
+    
     # 全局数据存储
     state = {
         "alarms": [],
@@ -26,24 +24,21 @@ def main(page: ft.Page):
         "current_tab": 0
     }
 
-    # ================= 数据加载 =================
+    # ================= 数据加载与保存 =================
     async def load_all_data():
-        # 加载闹钟
         alarms_path = await get_data_path("alarms.json")
         if os.path.exists(alarms_path):
             try:
                 with open(alarms_path, "r", encoding="utf-8") as f:
                     state["alarms"] = json.load(f)
-            except:
-                pass
-        # 加载便签(这里简化处理，直接存JSON)
+            except: pass
+            
         notes_path = await get_data_path("notes.json")
         if os.path.exists(notes_path):
             try:
                 with open(notes_path, "r", encoding="utf-8") as f:
                     state["notes"] = json.load(f)
-            except:
-                pass
+            except: pass
         refresh_views()
 
     async def save_alarms():
@@ -64,7 +59,7 @@ def main(page: ft.Page):
         for alarm in state["alarms"]:
             today_list.controls.append(
                 ft.Container(
-                    bgcolor="white", border_radius=15, padding=15,
+                    bgcolor="white", border_radius=15, padding=15, margin=ft.margin.only(bottom=10),
                     content=ft.Row([
                         ft.Column([
                             ft.Text(alarm["time"], size=28, weight="bold"),
@@ -75,51 +70,53 @@ def main(page: ft.Page):
                     ])
                 )
             )
-
+        
         # 刷新签签
         note_list.controls.clear()
         for note in state["notes"]:
             note_list.controls.append(
                 ft.Container(
-                    bgcolor="white", border_radius=15, padding=15,
+                    bgcolor="white", border_radius=15, padding=15, margin=ft.margin.only(bottom=10),
                     on_click=lambda e, n=note: open_note_edit(n),
                     content=ft.Column([
                         ft.Text(note["title"], size=16, weight="bold"),
-                        ft.Text(note["content"][:20] + "...", size=13, color="grey")
+                        ft.Text(note["content"][:20] + "..." if len(note["content"]) > 20 else note["content"], size=13, color="grey")
                     ])
                 )
             )
         page.update()
 
     # ================= 页面 1：今日 =================
-    today_list = ft.ListView(expand=True, spacing=10, padding=15)
-    view_today = ft.Column([ft.Container(content=ft.Text("今日提醒", size=28, weight="bold"), padding=20), today_list],
-                           expand=True)
+    today_list = ft.ListView(expand=True, spacing=0, padding=15)
+    view_today = ft.Column([
+        ft.Container(content=ft.Text("今日提醒", size=28, weight="bold"), padding=ft.padding.only(left=20, top=20, bottom=10)), 
+        today_list
+    ], expand=True)
 
     def open_add_alarm(e):
         time_picker = ft.TimePicker(confirm_text="确定", cancel_text="取消")
-
+        
         def on_time_change(e):
             if time_picker.value:
                 selected_time = time_picker.value.strftime("%H:%M")
                 hour_int = time_picker.value.hour
-                period = "早" if 5 <= hour_int < 11 else ("午" if 11 <= hour_int < 18 else "晚")
-
+                period = "早" if 5<=hour_int<11 else ("午" if 11<=hour_int<18 else "晚")
+                
                 state["alarms"].append({
                     "id": str(uuid.uuid4()), "time": selected_time, "period": period,
                     "content": "新提醒", "mode": "alarm", "active": True
                 })
                 page.run_task(save_alarms)
                 refresh_views()
-
+                
         time_picker.on_change = on_time_change
         page.open(time_picker)
 
     # ================= 页面 2：学习 =================
-    timer_text = ft.Text("20:00", size=72, weight="bold")
+    timer_text = ft.Text("20:00", size=72, weight="bold", color="#1A1A1A")
     status_text = ft.Text("准备学习", size=32, weight="bold", color="#FF3B30")
     timer_state = {"is_running": False, "time_left": 1200, "mode": "study"}
-
+    
     async def timer_loop():
         while True:
             await asyncio.sleep(1)
@@ -148,25 +145,25 @@ def main(page: ft.Page):
         btn_timer.content.value = "暂停" if timer_state["is_running"] else "继续"
         page.update()
 
-    btn_timer = ft.FilledButton("开始", on_click=toggle_timer,
-                                style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=25), bgcolor="#FF3B30"))
-
+    btn_timer = ft.FilledButton("开始", on_click=toggle_timer, style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=25), bgcolor="#FF3B30", color="white"))
+    
     view_study = ft.Column([
-        ft.Container(content=ft.Text("学习循环", size=28, weight="bold"), padding=20),
+        ft.Container(content=ft.Text("学习循环", size=28, weight="bold"), padding=ft.padding.only(left=20, top=20, bottom=10)),
         ft.Container(
-            content=ft.Column([status_text, timer_text, ft.Container(height=20), btn_timer], alignment="center",
-                              horizontal_alignment="center"),
+            content=ft.Column([status_text, timer_text, ft.Container(height=20), btn_timer], alignment="center", horizontal_alignment="center"),
             expand=True
         )
     ], expand=True)
 
     # ================= 页面 3：签签 =================
-    note_list = ft.ListView(expand=True, spacing=10, padding=15)
-    view_note = ft.Column([ft.Container(content=ft.Text("签签", size=28, weight="bold"), padding=20), note_list],
-                          expand=True)
+    note_list = ft.ListView(expand=True, spacing=0, padding=15)
+    view_note = ft.Column([
+        ft.Container(content=ft.Text("签签", size=28, weight="bold"), padding=ft.padding.only(left=20, top=20, bottom=10)), 
+        note_list
+    ], expand=True)
 
     note_text_field = ft.TextField(multiline=True, expand=True, text_size=16)
-
+    
     def open_note_edit(note=None):
         page.views.append(
             ft.View(
@@ -175,7 +172,7 @@ def main(page: ft.Page):
                     ft.AppBar(title=ft.Text("编辑签签"), bgcolor="#F2F4F7"),
                     ft.Container(content=note_text_field, padding=15, expand=True),
                     ft.Container(
-                        content=ft.ElevatedButton("保存", on_click=lambda e: save_note_and_back(note)),
+                        content=ft.FilledButton("保存", on_click=lambda e: save_note_and_back(note), style=ft.ButtonStyle(bgcolor="#FF3B30", color="white")),
                         padding=15
                     )
                 ]
@@ -197,46 +194,50 @@ def main(page: ft.Page):
         page.update()
         refresh_views()
 
-    # ================= 底部导航栏 & 路由 =================
+    # ================= 底部导航栏 & 悬浮按钮 =================
     main_container = ft.Container(content=view_today, expand=True)
 
     def switch_tab(e):
         idx = e.control.selected_index
         if idx == 0:
             main_container.content = view_today
-            fab.content = ft.Icon(ft.icons.ADD)
+            fab.content = ft.Icon(ft.Icons.ADD)
             fab.on_click = open_add_alarm
         elif idx == 1:
             main_container.content = view_study
             fab.visible = False
         elif idx == 2:
             main_container.content = view_note
-            fab.content = ft.Icon(ft.icons.CREATE)
+            fab.content = ft.Icon(ft.Icons.CREATE)
             fab.on_click = lambda e: open_note_edit()
-        fab.visible = (idx != 1)
+        
+        if idx != 1:
+            fab.visible = True
+            
         page.update()
 
     nav_bar = ft.NavigationBar(
         selected_index=0,
         on_change=switch_tab,
+        bgcolor="white",
+        indicator_color="#FFE5E5",
         destinations=[
-            ft.NavigationBarDestination(icon=ft.icons.ALARM, label="今日"),
-            ft.NavigationBarDestination(icon=ft.icons.BOOK, label="学习"),
-            ft.NavigationBarDestination(icon=ft.icons.EDIT, label="签签"),
+            ft.NavigationBarDestination(icon=ft.Icons.ALARM, label="今日"),
+            ft.NavigationBarDestination(icon=ft.Icons.BOOK, label="学习"),
+            ft.NavigationBarDestination(icon=ft.Icons.EDIT, label="签签"),
         ]
     )
 
-    fab = ft.FloatingActionButton(icon=ft.icons.ADD, bgcolor="#FF3B30", on_click=open_add_alarm)
+    fab = ft.FloatingActionButton(icon=ft.Icons.ADD, bgcolor="#FF3B30", on_click=open_add_alarm)
 
     page.add(
         ft.Column([main_container], expand=True),
         nav_bar,
         fab
     )
-
+    
     # 启动异步任务
     page.run_task(load_all_data)
     page.run_task(timer_loop)
 
-
-ft.run(main)
+ft.app(target=main)
