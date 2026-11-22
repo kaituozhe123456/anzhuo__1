@@ -11,7 +11,6 @@ async def get_data_path(filename):
 
 def main(page: ft.Page):
     page.title = "尚上签"
-    # 强行指定软件左上角的图标（双重保险）
     page.window.icon = "assets/icon.png"
     page.theme_mode = ft.ThemeMode.LIGHT
     page.bgcolor = "#F2F4F7"
@@ -49,7 +48,11 @@ def main(page: ft.Page):
         state["alarms"].sort(key=lambda x: x["time"])
         for alarm in state["alarms"]:
             today_list.controls.append(
-                ft.Container(bgcolor="white", border_radius=15, padding=15, margin=ft.margin.only(bottom=10),
+                ft.Container(
+                    bgcolor="white", 
+                    border_radius=15, 
+                    padding=15, 
+                    margin=10, # 替换了 margin.only
                     content=ft.Row([
                         ft.Column([ft.Text(alarm["time"], size=28, weight="bold"), ft.Text(alarm.get("period", "早"), size=12, color="grey")], spacing=2),
                         ft.Text(alarm["content"], size=16, weight="bold", expand=True),
@@ -60,14 +63,24 @@ def main(page: ft.Page):
         note_list.controls.clear()
         for note in state["notes"]:
             note_list.controls.append(
-                ft.Container(bgcolor="white", border_radius=15, padding=15, margin=ft.margin.only(bottom=10), on_click=lambda e, n=note: open_note_edit(n),
+                ft.Container(
+                    bgcolor="white", 
+                    border_radius=15, 
+                    padding=15, 
+                    margin=10, # 替换了 margin.only
+                    on_click=lambda e, n=note: open_note_edit(n),
                     content=ft.Column([ft.Text(note["title"], size=16, weight="bold"), ft.Text(note["content"][:20] + "..." if len(note["content"]) > 20 else note["content"], size=13, color="grey")])
                 )
             )
         page.update()
 
     today_list = ft.ListView(expand=True, spacing=0, padding=15)
-    view_today = ft.Column([ft.Container(content=ft.Text("今日提醒", size=28, weight="bold"), padding=ft.padding.only(left=20, top=20, bottom=10)), today_list], expand=True)
+    
+    # 替换了 ft.padding.only
+    view_today = ft.Column([
+        ft.Container(content=ft.Text("今日提醒", size=28, weight="bold"), padding=20), 
+        today_list
+    ], expand=True)
 
     def open_add_alarm(e):
         time_picker = ft.TimePicker(confirm_text="确定", cancel_text="取消")
@@ -114,10 +127,21 @@ def main(page: ft.Page):
         page.update()
 
     btn_timer = ft.FilledButton("开始", on_click=toggle_timer, style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=25), bgcolor="#FF3B30", color="white"))
-    view_study = ft.Column([ft.Container(content=ft.Text("学习循环", size=28, weight="bold"), padding=ft.padding.only(left=20, top=20, bottom=10)), ft.Container(content=ft.Column([status_text, timer_text, ft.Container(height=20), btn_timer], alignment="center", horizontal_alignment="center"), expand=True)], expand=True)
+    
+    # 替换了 ft.padding.only
+    view_study = ft.Column([
+        ft.Container(content=ft.Text("学习循环", size=28, weight="bold"), padding=20),
+        ft.Container(content=ft.Column([status_text, timer_text, ft.Container(height=20), btn_timer], alignment="center", horizontal_alignment="center"), expand=True)
+    ], expand=True)
 
     note_list = ft.ListView(expand=True, spacing=0, padding=15)
-    view_note = ft.Column([ft.Container(content=ft.Text("签签", size=28, weight="bold"), padding=ft.padding.only(left=20, top=20, bottom=10)), note_list], expand=True)
+    
+    # 替换了 ft.padding.only
+    view_note = ft.Column([
+        ft.Container(content=ft.Text("签签", size=28, weight="bold"), padding=20), 
+        note_list
+    ], expand=True)
+
     note_text_field = ft.TextField(multiline=True, expand=True, text_size=16)
     
     def open_note_edit(note=None):
@@ -159,8 +183,9 @@ def main(page: ft.Page):
         destinations=[ft.NavigationBarDestination(icon=ft.Icons.ACCESS_ALARM, label="今日"), ft.NavigationBarDestination(icon=ft.Icons.BOOK, label="学习"), ft.NavigationBarDestination(icon=ft.Icons.EDIT, label="签签")]
     )
     fab = ft.FloatingActionButton(icon=ft.Icons.ADD, bgcolor="#FF3B30", on_click=open_add_alarm)
+    
     page.add(ft.Column([main_container], expand=True), nav_bar, fab)
     page.run_task(load_all_data)
-    page.run_task(timer_loop)
+    page.run_task(timer_run_loop := timer_loop) # 加了重命名避免冲突
 
 ft.run(main)
