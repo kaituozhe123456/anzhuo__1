@@ -21,7 +21,9 @@ jobs:
         run: pip install "flet[all]"
 
       - name: Build APK
-        run: echo "y" | flet build apk --skip-flutter-doctor
+        env:
+          FLET_SERVER_URL: "https://flet.dev"
+        run: echo "y" | flet build apk --arch arm64-v8a --clear-cache
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
